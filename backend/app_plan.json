@@ -1,0 +1,28 @@
+{
+  "app_type": "analytics",
+  "app_name": "StellarSEO",
+  "tagline": "Real-time SEO visibility powered by Claude AI.",
+  "primary_color": "#0F172A",
+  "accent_color": "#6366F1",
+  "sections": [
+    "KPI Overview",
+    "Ranking Trends",
+    "Content Analysis",
+    "AI Insights",
+    "Automated Reports",
+    "White-label Settings"
+  ],
+  "backend_resources": [
+    "clients",
+    "api_keys",
+    "keyword_rankings",
+    "content_scores",
+    "audit_logs",
+    "reports"
+  ],
+  "features": [
+    "Real-time Claude metrics dashboard",
+    "Automated white-label reports",
+    "AI-powered trend alerts"
+  ]
+}
