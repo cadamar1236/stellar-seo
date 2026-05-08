@@ -106,51 +106,6 @@ function useInjectStyles() {
   }, []);
 }
 
-// -------------------- MOCK DATA --------------------
-function generateTimeSeries(days) {
-  let value = 65;
-  const now = new Date();
-  const data = [];
-  for (let i = days; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    value = Math.min(100, Math.max(30, value + (Math.random() - 0.4) * 10));
-    data.push({ date: dateStr, value: Math.round(value) });
-  }
-  return data;
-}
-
-const MOCK_DATA = {
-  kpis: [
-    { label: 'Claude Visibility Score', value: 87, change: 12.5, changeType: 'up' },
-    { label: 'Keywords Ranked in Claude', value: 4230, change: 8.2, changeType: 'up' },
-    { label: 'AI Click-Through Rate', value: 14.7, change: -2.1, changeType: 'down' },
-    { label: 'Conversions from AI', value: 312, change: 23.8, changeType: 'up' },
-  ],
-  timeSeriesFull: generateTimeSeries(90),
-  barData: [
-    { label: 'Claude 3.5 Sonnet', value: 92 },
-    { label: 'Claude 3 Opus', value: 76 },
-    { label: 'Claude 3 Haiku', value: 65 },
-    { label: 'GPT-4o', value: 88 },
-    { label: 'Gemini Pro', value: 54 },
-  ],
-  events: [
-    { name: 'Page indexed by Claude', count: 1850, conversionRate: 12.3 },
-    { name: 'Claude feature snippet', count: 340, conversionRate: 28.4 },
-    { name: 'Answer highlighted', count: 720, conversionRate: 18.7 },
-    { name: 'Product recommendation', count: 450, conversionRate: 35.1 },
-    { name: 'Knowledge panel', count: 120, conversionRate: 40.2 },
-  ],
-  funnel: [
-    { label: 'Impressions', value: 100000 },
-    { label: 'Clicks', value: 25000 },
-    { label: 'Engaged Visits', value: 8000 },
-    { label: 'Conversions', value: 1200 },
-  ],
-};
-
 // -------------------- SUB-COMPONENTS --------------------
 const KPICard = ({ label, value, change, changeType, loading }) => {
   if (loading) return <div className="skeleton" style={{ height: 120, width: '100%' }} />;
@@ -193,14 +148,15 @@ const DateRangeButtons = ({ range, onRangeChange }) => {
 
 const AreaChart = ({ data, loading, height = 280 }) => {
   if (loading) return <div className="skeleton" style={{ height, width: '100%' }} />;
-  const maxVal = Math.max(...(data || []).map(d => d.value), 0);
+  const safeData = data || [];
+  const maxVal = Math.max(...safeData.map(d => d.value), 0);
   const margin = { top: 20, right: 10, bottom: 30, left: 40 };
   const w = 600, h = height;
   const chartW = w - margin.left - margin.right;
   const chartH = h - margin.top - margin.bottom;
 
-  const points = (data || []).map((d, i) => ({
-    x: margin.left + (i / (data.length - 1)) * chartW,
+  const points = safeData.map((d, i) => ({
+    x: margin.left + (i / (safeData.length - 1)) * chartW,
     y: margin.top + chartH - (d.value / maxVal) * chartH,
   }));
 
@@ -227,9 +183,9 @@ const AreaChart = ({ data, loading, height = 280 }) => {
           </text>
         ))}
         {/* X axis dates (every few points) */}
-        {data.filter((_, i) => i % Math.ceil(data.length / 7) === 0).map((d, i) => {
-          const idx = data.indexOf(d);
-          const x = margin.left + (idx / (data.length - 1)) * chartW;
+        {safeData.filter((_, i) => i % Math.ceil(safeData.length / 7) === 0).map((d, i) => {
+          const idx = safeData.indexOf(d);
+          const x = margin.left + (idx / (safeData.length - 1)) * chartW;
           return (
             <text key={i} x={x} y={h - 5} textAnchor="middle" fill="var(--muted)" fontSize="10">{d.date}</text>
           );
@@ -246,12 +202,13 @@ const AreaChart = ({ data, loading, height = 280 }) => {
 
 const BarChart = ({ data, loading, height = 240 }) => {
   if (loading) return <div className="skeleton" style={{ height, width: '100%' }} />;
+  const safeData = data || [];
   const margin = { top: 20, right: 20, bottom: 40, left: 40 };
   const w = 500, h = height;
   const chartW = w - margin.left - margin.right;
   const chartH = h - margin.top - margin.bottom;
-  const maxVal = Math.max(...(data || []).map(d => d.value), 0);
-  const barWidth = chartW / data.length - 10;
+  const maxVal = Math.max(...safeData.map(d => d.value), 0);
+  const barWidth = safeData.length ? chartW / safeData.length - 10 : 0;
 
   return (
     <div className="glass p-4" style={{ animation: 'slideIn 0.3s ease' }}>
@@ -262,9 +219,9 @@ const BarChart = ({ data, loading, height = 240 }) => {
             <stop offset="100%" stopColor="#4F46E5" />
           </linearGradient>
         </defs>
-        {data.map((item, i) => {
+        {safeData.map((item, i) => {
           const barH = (item.value / maxVal) * chartH;
-          const x = margin.left + i * (chartW / data.length) + (chartW / data.length - barWidth) / 2;
+          const x = margin.left + i * (chartW / safeData.length) + (chartW / safeData.length - barWidth) / 2;
           const y = margin.top + chartH - barH;
           return (
             <g key={i}>
@@ -282,6 +239,7 @@ const EventsTable = ({ data, loading }) => {
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
   if (loading) return <div className="skeleton" style={{ height: 260, width: '100%' }} />;
+  const safeData = data || [];
   const handleSort = (col) => {
     if (sortCol === col) {
       setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
@@ -290,7 +248,7 @@ const EventsTable = ({ data, loading }) => {
       setSortDir('asc');
     }
   };
-  const sorted = [...(data || [])].sort((a, b) => {
+  const sorted = [...safeData].sort((a, b) => {
     if (!sortCol) return 0;
     const aVal = a[sortCol];
     const bVal = b[sortCol];
@@ -334,14 +292,15 @@ const EventsTable = ({ data, loading }) => {
 
 const FunnelViz = ({ steps, loading }) => {
   if (loading) return <div className="skeleton" style={{ height: 200, width: '100%' }} />;
-  const maxVal = steps[0]?.value || 1;
+  const safeSteps = steps || [];
+  const maxVal = safeSteps.length ? safeSteps[0].value : 1;
   return (
     <div className="glass p-5" style={{ animation: 'slideIn 0.3s ease' }}>
       <h3 className="text-lg font-semibold mb-4 gradient-text">Conversion Funnel</h3>
       <div className="flex flex-col gap-2">
-        {(steps || []).map((step, i) => {
+        {safeSteps.map((step, i) => {
           const widthPercent = ((step.value / maxVal) * 100).toFixed(1);
-          const drop = i > 0 ? `-${((1 - step.value / steps[i-1].value) * 100).toFixed(1)}%` : '';
+          const drop = i > 0 ? `-${((1 - step.value / safeSteps[i-1].value) * 100).toFixed(1)}%` : '';
           return (
             <div key={i} className="flex items-center gap-4">
               <span className="w-32 text-sm text-[var(--muted)] shrink-0">{step.label}</span>
@@ -394,11 +353,7 @@ export default function App() {
     (async () => {
       const data = await apiFetch('/api/dashboard');
       if (data) setDashboardData(data);
-      else {
-        // Simulate network delay
-        await new Promise(r => setTimeout(r, 800));
-        setDashboardData(MOCK_DATA);
-      }
+      else setDashboardData(null); // No mock fallback, rely on real data
       setLoading(false);
     })();
   }, []);
@@ -504,7 +459,7 @@ export default function App() {
             <div className="flex flex-col gap-6" style={{ animation: 'fadeIn 0.3s ease' }}>
               {/* KPI Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {(dashboardData?.kpis || MOCK_DATA.kpis).map((kpi, i) => (
+                {(dashboardData?.kpis || []).map((kpi, i) => (
                   <KPICard key={i} {...kpi} loading={loading} />
                 ))}
               </div>
@@ -517,19 +472,19 @@ export default function App() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-3 gradient-text">Model Visibility Comparison</h3>
-                  <BarChart data={dashboardData?.barData || MOCK_DATA.barData} loading={loading} />
+                  <BarChart data={dashboardData?.barData || []} loading={loading} />
                 </div>
               </div>
 
               {/* Events Table */}
               <div>
                 <h3 className="text-lg font-semibold mb-3 gradient-text">AI Visibility Events</h3>
-                <EventsTable data={dashboardData?.events || MOCK_DATA.events} loading={loading} />
+                <EventsTable data={dashboardData?.events || []} loading={loading} />
               </div>
 
               {/* Funnel */}
               <div>
-                <FunnelViz steps={dashboardData?.funnel || MOCK_DATA.funnel} loading={loading} />
+                <FunnelViz steps={dashboardData?.funnel || []} loading={loading} />
               </div>
             </div>
           )}
